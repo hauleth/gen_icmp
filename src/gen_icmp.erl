@@ -30,7 +30,7 @@ open() ->
 %% </ul>
 %% @end
 open(Opts) ->
-    gen_server:start_link(?MODULE, {self(), Opts}, []).
+    gen_server:start(?MODULE, {self(), Opts}, []).
 
 %% @equiv ping(Pid, Addr, Data, [])
 ping(Pid, Addr, Data) -> ping(Pid, Addr, Data, []).
