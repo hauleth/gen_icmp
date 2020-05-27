@@ -3,20 +3,23 @@
 -module(inet_icmp).
 
 -export([open/1,
-         decode/1,
-         echo_req/3]).
+         encode/4,
+         decode/1]).
 
 %% @doc Open new ICMP socket
 open(Type) -> socket:open(inet, Type, icmp).
 
-%% @doc Build Echo Req message
-echo_req(Id, Seq, Data) ->
-    Checksum = checksum(<<8, 0, 0:16, Id, Seq, Data/binary>>),
-    <<8, 0, Checksum/binary, Id, Seq, Data/binary>>.
+encode(Type0, Code0, Meta, Data) ->
+    {Type, Code} = encode_type(Type0, Code0),
+    Checksum = checksum(<<Type, Code, 0:16, Meta/binary, Data/binary>>),
+
+    <<Type, Code, Checksum/binary, Meta/binary, Data/binary>>.
+
+encode_type(echoreq, _) -> {8, 0};
+encode_type(Type, Code) -> {Type, Code}.
 
 %% @doc
-%% Decode ICMP datagram, we skip first 20 bytes that are IP header and aren't
-%% needed for us. Then ICMP packet looks like:
+%% ICMP packet looks like:
 %%
 %%  0                   1                   2                   3
 %%  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -28,13 +31,26 @@ echo_req(Id, Seq, Data) ->
 %% |                            Data
 %% +------...
 %% @end
-decode(<<_IpHdr:20/binary, Type, Code, _CkSum:16, Meta:2/binary, Data/binary>>) ->
+decode(<<4:4, IHL:4, Rest/binary>>) ->
+    Len = IHL * 4 - 1,
+    % We need to ignore IPv4 header if present (it is a case on macOS)
+    case Rest of
+        <<_IpHdr:Len/binary, Type, Code, _CkSum:16, Meta:4/binary, Data/binary>> ->
+            do_decode(Type, Code, Meta, Data);
+        <<Type, Code, _CkSum:16, Meta:4/binary, Data/binary>> ->
+            do_decode(Type, Code, Meta, Data)
+    end;
+decode(<<Type, Code, _CkSum:16, Meta:4/binary, Data/binary>>) ->
     do_decode(Type, Code, Meta, Data).
 
-do_decode(0, 0, <<Id, Seq>>,  Data) ->
-    {echo_reply, #{id => Id, seq => Seq, data => Data}};
-do_decode(3, Code, _Meta, Data) when Code >= 0, Code =< 5 ->
-    {dest_unreachable, Code, Data}.
+do_decode(0, 0, <<Id:16, Seq:16>>,  Data) ->
+    {echorep, #{id => Id, seq => Seq, data => Data}};
+do_decode(3, Code, _Meta, Data) ->
+    {unreach, #{code => Code, data => Data}};
+do_decode(8, 0, <<Id:16, Seq:16>>,  Data) ->
+    {echoreq, #{id => Id, seq => Seq, data => Data}};
+do_decode(Type, Code, Meta, Data) ->
+    {Type, #{code => Code, meta => Meta, data => Data}}.
 
 %% Compute checksum of the package using Internet Checksum
 checksum(Data) when is_binary(Data) -> checksum(Data, 0).

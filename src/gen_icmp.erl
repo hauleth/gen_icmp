@@ -46,7 +46,7 @@ ping(Pid, Addr, Data) -> ping(Pid, Addr, Data, []).
 %% </ul>
 %% @end
 ping(Pid, Addr, Data, Opts) ->
-    gen_server:cast(Pid, {echo_req, Addr, Data, Opts}).
+    gen_server:call(Pid, {echoreq, Addr, Data, Opts}).
 
 %% gen_server handles =========================================================
 
@@ -69,30 +69,30 @@ init({Pid, Opts}) ->
     end.
 
 %% @hidden
-handle_call(_Msg, _From, State) ->
-    {reply, ok, State}.
-
-%% @hidden
-handle_cast({echo_req, Addr, Data, Opts}, #state{socket=Socket, module=Module} = State) ->
+handle_call({echoreq, Addr, Data, Opts}, _From, #state{socket=Socket, module=Module} = State) ->
     Id = proplists:get_value(id, Opts, 0),
     Seq = proplists:get_value(seq, Opts, 0),
+    Msg = Module:encode(echoreq, 0, <<Id:16, Seq:16>>, Data),
 
-    Msg = Module:echo_req(Id, Seq, Data),
+    Resp = socket:sendto(Socket, Msg, Addr),
 
-    ok = socket:sendto(Socket, Msg, Addr),
+    {reply, Resp, State, {continue, reply}}.
 
-    {noreply, State, {continue, echo_reply}}.
+handle_cast(_Msg, State) ->
+    {noreply, State}.
 
 %% @hidden
-handle_continue(echo_reply, #state{socket=Socket, owner=Pid, module=Module} = State) ->
+handle_continue(reply, #state{socket=Socket, owner=Pid, module=Module} = State) ->
     case socket:recvfrom(Socket, [], nowait) of
         {ok, {From, Data}} ->
             Pid ! {icmp, From, Module:decode(Data)},
-            {noreply, State, {continue, echo_reply}};
+            {noreply, State, {continue, reply}};
         {select, _Info} ->
             {noreply, State}
     end.
 
 %% @hidden
 handle_info({'$socket', Socket, select, _Info}, #state{socket=Socket} = State) ->
-    {noreply, State, {continue, echo_reply}}.
+    {noreply, State, {continue, reply}};
+handle_info({'DOWN', Ref, process, Pid, _Info}, #state{owner=Pid, owner_mon=Ref} = State) ->
+    {stop, normal, State}.
