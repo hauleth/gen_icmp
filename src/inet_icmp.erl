@@ -43,12 +43,20 @@ decode(<<4:4, IHL:4, Rest/binary>>) ->
 decode(<<Type, Code, _CkSum:16, Meta:4/binary, Data/binary>>) ->
     do_decode(Type, Code, Meta, Data).
 
-do_decode(0, 0, <<Id:16, Seq:16>>,  Data) ->
+do_decode(0, 0, <<Id:16, Seq:16>>, Data) ->
     {echorep, #{id => Id, seq => Seq, data => Data}};
 do_decode(3, Code, _Meta, Data) ->
     {unreach, #{code => Code, data => Data}};
-do_decode(8, 0, <<Id:16, Seq:16>>,  Data) ->
+do_decode(8, 0, <<Id:16, Seq:16>>, Data) ->
     {echoreq, #{id => Id, seq => Seq, data => Data}};
+do_decode(13, 0, <<Id:16, Seq:16>>, <<Orig:32, Recv:32, Trans:32>>) ->
+    {tstamp, #{id => Id, seq => Seq,
+               originate => Orig, 'receive' => Recv, transit => Trans}};
+do_decode(14, 0, <<Id:16, Seq:16>>, <<Orig:32, Recv:32, Trans:32>>) ->
+    Stamp = erlang:system_time(millisecond) rem 86400000,
+    {tstamprep, #{id => Id, seq => Seq,
+                  originate => Orig, back => Stamp,
+                  'receive' => Recv, transit => Trans}};
 do_decode(Type, Code, Meta, Data) ->
     {Type, #{code => Code, meta => Meta, data => Data}}.
 

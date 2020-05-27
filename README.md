@@ -9,10 +9,10 @@ ICMP implementation for Erlang using `socket` (so for now only Unix support).
 
 Addr = #{family => inet, port => 0, addr => {127, 0, 0, 1}}.
 
-ok = gen_icmp:ping(Socket, Addr, <<1,2,3,4>>).
+ok = gen_icmp:echoreq(Socket, Addr, <<1,2,3,4>>).
 
 receive
-    {icmp, Addr, {echo_reply, #{data := <<1,2,3,4>>}}} -> ok
+    {icmp, Addr, {echorep, #{data := <<1,2,3,4>>}}} -> ok
 end.
 ```
 

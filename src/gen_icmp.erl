@@ -2,10 +2,8 @@
 
 -behaviour(gen_server).
 
--export([open/0,
-         open/1,
-         ping/3,
-         ping/4]).
+-export([open/0, open/1,
+         echoreq/3, echoreq/4]).
 
 -export([init/1,
          handle_cast/2,
@@ -32,8 +30,8 @@ open() ->
 open(Opts) ->
     gen_server:start(?MODULE, {self(), Opts}, []).
 
-%% @equiv ping(Pid, Addr, Data, [])
-ping(Pid, Addr, Data) -> ping(Pid, Addr, Data, []).
+%% @equiv echoreq(Pid, Addr, Data, [])
+echoreq(Pid, Addr, Data) -> echoreq(Pid, Addr, Data, []).
 
 %% @doc
 %% Send ICMP echo request to the `Addr' with `Data'.
@@ -45,7 +43,7 @@ ping(Pid, Addr, Data) -> ping(Pid, Addr, Data, []).
 %%      <li>`{seq, 0..255}' - packet number in stream, defaults to `0'</li>
 %% </ul>
 %% @end
-ping(Pid, Addr, Data, Opts) ->
+echoreq(Pid, Addr, Data, Opts) when is_binary(Data) ->
     gen_server:call(Pid, {echoreq, Addr, Data, Opts}).
 
 %% gen_server handles =========================================================
@@ -64,7 +62,8 @@ init({Pid, Opts}) ->
            end,
     Ref = monitor(process, Pid),
     case Module:open(Type) of
-        {ok, Socket} -> {ok, #state{socket=Socket, module=Module, owner=Pid, owner_mon=Ref}};
+        {ok, Socket} ->
+            {ok, #state{socket=Socket, module=Module, owner=Pid, owner_mon=Ref}, {continue, reply}};
         Error -> Error
     end.
 
