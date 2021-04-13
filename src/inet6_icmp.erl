@@ -1,15 +1,19 @@
 %% @hidden
-%% TODO: Implementation of ICMPv6 protocol
+%% Implementation of ICMPv6 protocol
 -module(inet6_icmp).
 
 -export([open/1,
+         addr/1,
          encode/4,
          decode/1]).
 
 %% IANA number for ICMPv6 as `socket` do not support it OotB.
 -define(ICMPv6, {raw, 58}).
 
-open(Type) -> socket:open(inet6, Type, {raw, 58}).
+open(Type) -> socket:open(inet6, Type, ?ICMPv6).
+
+addr(Addr) ->
+    #{addr => Addr, port => 0, family => inet6}.
 
 encode(Type0, Code0, Meta, Data) ->
     {Type, Code} = encode_type(Type0, Code0),
@@ -35,6 +39,7 @@ encode_type(Type, Code) -> {Type, Code}.
 decode(<<Type, Code, _CkSum:16, Meta:4/binary, Data/binary>>) ->
     do_decode(Type, Code, Meta, Data).
 
+% TODO: Implement other ICMPv6 messages decoding
 do_decode(1, Code, _Meta, Data) ->
     {unreach, #{code => Code, data => Data}};
 do_decode(2, 0, <<Mtu:32>>, Data) ->

@@ -10,7 +10,7 @@ user group is within `sysctl net.ipv4.ping_group_range`):
 ```erlang
 {ok, Socket} = gen_icmp:open().
 
-Addr = #{family => inet, port => 0, addr => {127, 0, 0, 1}}.
+Addr = {127, 0, 0, 1}.
 
 ok = gen_icmp:echoreq(Socket, Addr, <<1,2,3,4>>).
 
@@ -24,7 +24,7 @@ If you want to be sure of message order you can use `seq` option:
 ```erlang
 {ok, Socket} = gen_icmp:open().
 
-Addr = #{family => inet, port => 0, addr => {127, 0, 0, 1}}.
+Addr = {127, 0, 0, 1}.
 
 ok = gen_icmp:echoreq(Socket, Addr, <<1,2,3,4>>, [{seq, 0}]).
 ok = gen_icmp:echoreq(Socket, Addr, <<5,6,7,8>>, [{seq, 1}]).
