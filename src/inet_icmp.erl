@@ -68,10 +68,10 @@ do_decode(Type, Code, Meta, Data) ->
     {Type, #{code => Code, meta => Meta, data => Data}}.
 
 %% Compute checksum of the package using Internet Checksum
-checksum(Data) when is_binary(Data) -> checksum(Data, 0).
+checksum(Data) -> checksum(Data, 0).
 
 checksum(<<X:16, Rest/binary>>, Sum) -> checksum(Rest, Sum + X);
-checksum(<<X>>, Sum) -> checksum(<<>>, Sum + X);
+checksum(<<X>>, Sum) -> checksum(<<X, 0>>, Sum);
 checksum(<<>>, Sum) ->
     <<A:16, B:16>> = <<Sum:32>>,
     <<bnot(A + B):16/big>>.
