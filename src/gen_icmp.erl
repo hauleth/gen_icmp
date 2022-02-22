@@ -33,7 +33,7 @@ open() ->
 %%      <li>`seq'</li>
 %% </ul>
 %%
-%% Other fields are `MessageType' dependant.
+%% Other fields are `MessageType' dependent.
 %% @end
 open(Opts) ->
     gen_server:start(gen_icmp_server, {self(), Opts}, []).
@@ -54,7 +54,7 @@ echoreq(Socket, Addr, Data) -> echoreq(Socket, Addr, Data, []).
 %%      <li>`{seq, 0..255}' - packet number in stream, defaults to `0'</li>
 %% </ul>
 %%
-%% Beware that `Opts' are platform dependant and may not work as expected
+%% Beware that `Opts' are platform dependent and may not work as expected
 %% between platforms (for example Linux will always ignore given values and will
 %% self assign them).
 %% @end
